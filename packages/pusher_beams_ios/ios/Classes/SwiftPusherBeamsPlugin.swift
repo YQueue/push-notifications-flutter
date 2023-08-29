@@ -8,6 +8,7 @@ public class SwiftPusherBeamsPlugin: FlutterPluginAppLifeCycleDelegate, FlutterP
     
     var interestsDidChangeCallback : String? = nil
     var messageDidReceiveInTheForegroundCallback : String? = nil
+    var onBackgroundNotificationOpenedCallback : String? = nil
     
     var beamsClient : PushNotifications?
     var started : Bool = false
@@ -145,6 +146,10 @@ public class SwiftPusherBeamsPlugin: FlutterPluginAppLifeCycleDelegate, FlutterP
         messageDidReceiveInTheForegroundCallback = callbackId
     }
     
+    public func onBackgroundNotificationOpenedCallbackId(_ callbackId: String, error: AutoreleasingUnsafeMutablePointer<FlutterError?>) {
+        onBackgroundNotificationOpenedCallback = callbackId
+    }
+    
     public override func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         if (messageDidReceiveInTheForegroundCallback != nil && SwiftPusherBeamsPlugin.callbackHandler != nil) {
             let pusherMessage: [String : Any] = [
@@ -160,8 +165,16 @@ public class SwiftPusherBeamsPlugin: FlutterPluginAppLifeCycleDelegate, FlutterP
     }
 
     public override func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Handle the user interaction with the notification
-        // Not Implemented yet
+        // Handle the notification opened callback
+        if (onBackgroundNotificationOpenedCallback != nil && SwiftPusherBeamsPlugin.callbackHandler != nil) {
+            let pusherMessage = [
+                "data": response.notification.request.content.userInfo["data"]
+            ]
+            
+            SwiftPusherBeamsPlugin.callbackHandler?.handleCallbackCallbackId(onBackgroundNotificationOpenedCallback!, callbackName: "onBackgroundNotificationOpened", args: [pusherMessage], completion: {_ in
+                print("SwiftPusherBeamsPlugin: background notification opened: \(pusherMessage)")
+            })
+        }
     }
     
 }

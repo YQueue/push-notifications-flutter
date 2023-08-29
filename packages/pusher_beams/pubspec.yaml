@@ -11,10 +11,26 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  pusher_beams_platform_interface: ^1.1.1
-  pusher_beams_web: ^1.1.1
-  pusher_beams_android: ^1.1.1
-  pusher_beams_ios: ^1.1.1
+  pusher_beams_platform_interface:
+    git:
+      url: git@github.com:YQueue/push-notifications-flutter.git
+      ref: master
+      path: packages/pusher_beams_platform_interface
+  pusher_beams_web:
+    git:
+      url: git@github.com:YQueue/push-notifications-flutter.git
+      ref: master
+      path: packages/pusher_beams_web
+  pusher_beams_android:
+    git:
+      url: git@github.com:YQueue/push-notifications-flutter.git
+      ref: master
+      path: packages/pusher_beams_android
+  pusher_beams_ios:
+    git:
+      url: git@github.com:YQueue/push-notifications-flutter.git
+      ref: master
+      path: packages/pusher_beams_ios
   uuid: ^3.0.5
 
 dev_dependencies:

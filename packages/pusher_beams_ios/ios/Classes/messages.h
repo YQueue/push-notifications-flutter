@@ -32,6 +32,7 @@ NSObject<FlutterMessageCodec> *PusherBeamsApiGetCodec(void);
 - (void)setUserIdUserId:(NSString *)userId provider:(BeamsAuthProvider *)provider callbackId:(NSString *)callbackId error:(FlutterError *_Nullable *_Nonnull)error;
 - (void)clearAllStateWithError:(FlutterError *_Nullable *_Nonnull)error;
 - (void)onMessageReceivedInTheForegroundCallbackId:(NSString *)callbackId error:(FlutterError *_Nullable *_Nonnull)error;
+- (void)onBackgroundNotificationOpenedCallbackId:(NSString *)callbackId error:(FlutterError *_Nullable *_Nonnull)error;
 - (void)stopWithError:(FlutterError *_Nullable *_Nonnull)error;
 @end
 

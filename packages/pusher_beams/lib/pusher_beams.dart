@@ -319,6 +319,37 @@ class PusherBeams extends PusherBeamsPlatform with CallbackHandlerApi {
         .onMessageReceivedInTheForeground(kIsWeb ? callback : callbackId);
   }
 
+  /// Registers a listener which calls back the [OnMessageReceivedInTheBackground] function when the background push notification is opened.
+  ///
+  /// **This is only implemented on iOS.**
+  ///
+  /// Notification is a map containing the following keys:
+  ///   * data
+  /// ## Example Usage
+  ///
+  /// ```dart
+  /// function someAsyncFunction() async {
+  ///   if (Platform.isIOS) {
+  ///     await PusherBeams.instance.onBackgroundNotificationOpened((notification) => {
+  ///       print('Background notification opened: $notification')
+  ///     });
+  ///   }
+  /// }
+  ///
+  /// ```
+  ///
+  /// Throws an [Exception] in case of failure.
+  @override
+  Future<void> onBackgroundNotificationOpened(
+      OnBackgroundNotificationOpened callback) async {
+    final callbackId = _uuid.v4();
+
+    _callbacks[callbackId] = callback;
+
+    await _pusherBeamsApi
+        .onBackgroundNotificationOpened(kIsWeb ? callback : callbackId);
+  }
+
   /// Handler which receives callbacks from the native platforms.
   /// This currently supports [onInterestChanges] and [setUserId] callbacks
   /// but by default it just call the [Function] set.
@@ -336,6 +367,9 @@ class PusherBeams extends PusherBeamsPlatform with CallbackHandlerApi {
         callback(args[0] as String?);
         return;
       case "onMessageReceivedInTheForeground":
+        callback((args[0] as Map<Object?, Object?>));
+        return;
+      case "onBackgroundNotificationOpened":
         callback((args[0] as Map<Object?, Object?>));
         return;
       default:
