@@ -158,6 +158,7 @@ public class SwiftPusherBeamsPlugin: FlutterPluginAppLifeCycleDelegate, FlutterP
                 "data": notification.request.content.userInfo["data"]
             ]
             
+            completionHandler([.alert, .badge, .sound])
             SwiftPusherBeamsPlugin.callbackHandler?.handleCallbackCallbackId(messageDidReceiveInTheForegroundCallback!, callbackName: "onMessageReceivedInTheForeground", args: [pusherMessage], completion: {_ in
                 print("SwiftPusherBeamsPlugin: message received: \(pusherMessage)")
             })
@@ -176,5 +177,5 @@ public class SwiftPusherBeamsPlugin: FlutterPluginAppLifeCycleDelegate, FlutterP
             })
         }
     }
-    
+        
 }

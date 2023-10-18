@@ -1,23 +1,31 @@
 package com.pusher.pusher_beams
 
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.annotation.NonNull
+import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.RemoteMessage
-import com.pusher.pushnotifications.*
+import com.pusher.pushnotifications.BeamsCallback
+import com.pusher.pushnotifications.PushNotificationReceivedListener
+import com.pusher.pushnotifications.PushNotifications
+import com.pusher.pushnotifications.PusherCallbackError
+import com.pusher.pushnotifications.SubscriptionsChangedListener
 import com.pusher.pushnotifications.auth.AuthData
 import com.pusher.pushnotifications.auth.AuthDataGetter
 import com.pusher.pushnotifications.auth.BeamsTokenProvider
 import io.flutter.Log
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
-
 import io.flutter.plugin.common.PluginRegistry.NewIntentListener
 import org.json.JSONObject
 import org.json.JSONTokener
+
 
 /** PusherBeamsPlugin */
 class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware, NewIntentListener {
@@ -29,7 +37,9 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
 
     private lateinit var callbackHandlerApi: Messages.CallbackHandlerApi
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onAttachedToEngine(
+        @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
+    ) {
         Messages.PusherBeamsApi.setup(flutterPluginBinding.binaryMessenger, this)
 
         context = flutterPluginBinding.applicationContext
@@ -80,6 +90,7 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
     override fun getInitialMessage(result: Messages.Result<kotlin.collections.Map<String, kotlin.Any?>>) {
         Log.d(this.toString(), "Returning initial data: $data")
         result.success(data)
+        data = null
     }
 
     override fun addDeviceInterest(interest: kotlin.String) {
@@ -111,8 +122,7 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
             PushNotifications.setOnDeviceInterestsChangedListener(object :
                 SubscriptionsChangedListener {
                 override fun onSubscriptionsChanged(interests: Set<String>) {
-                    callbackHandlerApi.handleCallback(
-                        callbackId,
+                    callbackHandlerApi.handleCallback(callbackId,
                         "onInterestChanges",
                         listOf(interests.toList()),
                         Messages.CallbackHandlerApi.Reply {
@@ -124,29 +134,22 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
     }
 
     override fun setUserId(
-        userId: String,
-        provider: Messages.BeamsAuthProvider,
-        callbackId: String
+        userId: String, provider: Messages.BeamsAuthProvider, callbackId: String
     ) {
-        val tokenProvider = BeamsTokenProvider(
-            provider.authUrl,
-            object : AuthDataGetter {
-                override fun getAuthData(): AuthData {
-                    return AuthData(
-                        headers = provider.headers,
-                        queryParams = provider.queryParams
-                    )
-                }
+        val tokenProvider = BeamsTokenProvider(provider.authUrl, object : AuthDataGetter {
+            override fun getAuthData(): AuthData {
+                return AuthData(
+                    headers = provider.headers, queryParams = provider.queryParams
+                )
             }
-        )
+        })
 
         PushNotifications.setUserId(
             userId,
             tokenProvider,
             object : BeamsCallback<Void, PusherCallbackError> {
                 override fun onFailure(error: PusherCallbackError) {
-                    callbackHandlerApi.handleCallback(
-                        callbackId,
+                    callbackHandlerApi.handleCallback(callbackId,
                         "setUserId",
                         listOf(error.message),
                         Messages.CallbackHandlerApi.Reply {
@@ -163,8 +166,7 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
                             Log.d(this.toString(), "Device authenticated with $userId")
                         })
                 }
-            }
-        )
+            })
     }
 
     override fun clearAllState() {
@@ -177,6 +179,44 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
                 activity,
                 object : PushNotificationReceivedListener {
                     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+                        val channelId = "yqueue_channel"
+                        val channelName = "YQueue Notifications"
+                        val builder = NotificationCompat.Builder(
+                            context, channelId,
+                        ).setAutoCancel(true)
+                            .setSmallIcon(R.drawable.icon)
+                            .setContentTitle(remoteMessage.notification?.title)
+                            .setContentText(remoteMessage.notification?.body)
+                            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+                        val intent = Intent(context, currentActivity!!.javaClass)
+                        remoteMessage.data.forEach { (key, value) -> intent.putExtra(key, value) }
+                        val pendingIntent: PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            PendingIntent.getActivity(
+                                context,
+                                0,
+                                intent,
+                                PendingIntent.FLAG_IMMUTABLE
+                            )
+                        } else {
+                            PendingIntent.getActivity(
+                                context,
+                                0,
+                                intent,
+                                PendingIntent.FLAG_ONE_SHOT
+                            )
+                        }
+                        builder.setContentIntent(pendingIntent)
+
+                        val notificationManager =
+                            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            val importance = NotificationManager.IMPORTANCE_DEFAULT
+                            val channel = NotificationChannel(channelId, channelName, importance)
+                            notificationManager.createNotificationChannel(channel)
+                        }
+                        notificationManager.notify(0, builder.build())
+
                         activity.runOnUiThread {
                             val pusherMessage = remoteMessage.toPusherMessage()
                             callbackHandlerApi.handleCallback(
@@ -197,8 +237,7 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
     }
 
     private fun bundleToMap(info: kotlin.String?): kotlin.collections.Map<kotlin.String, kotlin.Any?>? {
-        if (info == null)
-            return null
+        if (info == null) return null
 
         val map: MutableMap<String, kotlin.Any?> = HashMap<String, kotlin.Any?>()
         val infoJson = JSONTokener(info).nextValue() as JSONObject
@@ -213,7 +252,5 @@ class PusherBeamsPlugin : FlutterPlugin, Messages.PusherBeamsApi, ActivityAware,
 }
 
 fun RemoteMessage.toPusherMessage() = mapOf(
-    "title" to notification?.title,
-    "body" to notification?.body,
-    "data" to data["data"]
+    "title" to notification?.title, "body" to notification?.body, "data" to data["data"]
 )
