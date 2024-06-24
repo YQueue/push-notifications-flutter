@@ -19,7 +19,7 @@ dependencies:
       ref: master
       path: packages/pusher_beams_platform_interface
   js: ^0.6.3
-  uuid: ^3.0.5
+  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:
